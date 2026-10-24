@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 from auth import verify_login, register_user
+from database import init_db
 
 class data(BaseModel):
     choice: int
@@ -13,6 +14,7 @@ class registerdata(BaseModel):
     password: str
 
 app = FastAPI()
+init_db()
 @app.post("/login")
 def login(request_body:data):
     
