@@ -1,17 +1,32 @@
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, EmailStr
 from auth import verify_login, register_user
 from database import init_db
 
 class data(BaseModel):
-    choice: int
     identifier: str
-    password: str
+    password: str = Field(max_length=64)
+    @field_validator("identifier")
+    @classmethod
+    def cleanIdentifier(cls, value: str) -> str:
+        return value.strip().lower()
 
 class registerdata(BaseModel):
-    username: str
-    email: str
-    password: str
+    username: str = Field(min_length=3, max_length=30, pattern=r"^[a-zA-Z0-9_]+$")
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=64)
+    @field_validator("username")
+    @classmethod
+    def clean_username(cls, value: str) -> str:
+        return value.lower()
+
+    @field_validator("email")
+    @classmethod
+    def clean_email(cls, value: str) -> str:
+        value = value.strip().lower()
+        if "@" not in value:
+            raise ValueError("Invalid email")
+        return value
 
 app = FastAPI()
 init_db()
@@ -19,7 +34,6 @@ init_db()
 def login(request_body:data):
     
     result = verify_login(
-        request_body.choice,
         request_body.identifier,
         request_body.password
     )

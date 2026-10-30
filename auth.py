@@ -1,38 +1,31 @@
-import sqlite3
+import sqlite3, bcrypt
+from pydantic import Field
 from database import get_connection
 
-def verify_login(choice: int, identifier: str, password: str) -> bool:
+def verify_login(identifier: str, password: str) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
-        if choice != 1 and choice != 2:
+        cursor.execute(
+        "SELECT password FROM users WHERE (username = ? OR email = ?)", (identifier, identifier)
+        )
+        row = cursor.fetchone()
+        if row is None:
             return False
-    
-        if choice == 1:
-            cursor.execute(
-            "SELECT * FROM users WHERE email = ? AND password = ?", (identifier, password)
-            )
-            row = cursor.fetchone()
-            return row is not None
-
-        if choice == 2:
-            cursor.execute(
-            "SELECT * FROM users WHERE username = ? AND password = ?", (identifier, password)
-            )
-            row = cursor.fetchone()
-            return row is not None
+        return bcrypt.checkpw(password.encode(),row[0].encode())
     finally:
         conn.close()
 
 
-def register_user(username: str, email: str, password: str) -> bool:
+def register_user(username: str, email: str, password: str = Field(min_length=8, max_length=64)) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        hashPassword = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         cursor.execute(
     "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-    (username, email, password),
+    (username, email, hashPassword),
 )
         conn.commit()
         return True
